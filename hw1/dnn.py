@@ -73,7 +73,7 @@ class DNN():
         while i < len(layer)-1:
             self.nets.append(np.random.randn(int(layer[i+1]),int(layer[i])+1).astype(dtype='float32'))
             i += 1
-
+        self.netNum,self.layerNum=len(self.nets),len(self.nets)+1
         return
 
     def forward(self,X):
@@ -94,27 +94,26 @@ class DNN():
         return self.cost(r,label)
 
     def backpropagation(self,label):
-        layerNum,netNum=len(self.beforeActi),len(self.nets)
+        batchSize=self.beforeActi[0].shape[1]
         self.weightGrad=[]
-        delta=np.multiply(self.activate_diff(self.beforeActi[layerNum-1]),self.cost_diff(self.afterActi[layerNum-1],label))
-        oneArr=np.ones((1,self.afterActi[layerNum-2].shape[1])).astype(dtype='float32')
-        a=np.concatenate((self.afterActi[layerNum-2],oneArr),axis=0)
+        delta=np.multiply(self.activate_diff(self.beforeActi[self.layerNum-1]),self.cost_diff(self.afterActi[self.layerNum-1],label))
+        oneArr=np.ones((1,batchSize)).astype(dtype='float32')
+        a=np.concatenate((self.afterActi[self.layerNum-2],oneArr),axis=0)
         c_partial=np.dot(delta,np.transpose(a))/delta.shape[1]
         self.weightGrad.append(c_partial)
-        print(c_partial.shape)#debug
-        for i in range(1,netNum):
-            x=np.dot(np.transpose(self.layers[netNum-i]),delta)
-            delta=np.multiply(self.activate_diff(self.beforeActi[layerNum-i-1]),x)
-            oneArr=np.ones((1,self.afterActi[layerNum-(i+1)].shape[1])).astype(dtype='float32')
-            a=np.concatenate((self.afterActi[layerNum-(i+1)],oneArr),axis=0)
+        for i in range(1,self.netNum):
+            x=np.dot(np.transpose(self.nets[self.netNum-i]),delta)
+            x=np.delete(x,x.shape[0]-1,0)
+            delta=np.multiply(self.activate_diff(self.beforeActi[self.layerNum-1-i]),x)
+            oneArr=np.ones((1,batchSize)).astype(dtype='float32')
+            a=np.concatenate((self.afterActi[self.layerNum-2-i],oneArr),axis=0)
             c_partial=np.dot(delta,np.transpose(a))/delta.shape[1]
             self.weightGrad.append(c_partial)
-            print(c_partial.shape)#debug
         return
 
     def update(self):
-        for i in range(len(self.layers)):
-            self.layers[i]=self.layers[i]-self.learningRate(self.learningRateFunc)*self.weightGrad[len(self.weightGrad)-1-i]
+        for i in range(len(self.nets)):
+            self.nets[i]=self.nets[i]-self.learningRate(self.learningRateFunc)*self.weightGrad[len(self.weightGrad)-1-i]
         return
 
     def predict(self):
