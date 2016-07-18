@@ -1,7 +1,9 @@
 import numpy as np
 
-def norm1(r,label):
-    return np.mean(np.linalg.norm(r-label,ord=1,axis=0))
+def meanSquare(r,label,nets):
+    x=0.5*np.linalg.norm(r-label,ord=2,axis=0)
+    cost=np.mean(np.multiply(x,x))
+    return cost
 
-def norm1_diff(r,label):
-    return np.ones((r.shape[0],r.shape[1]))
+def meanSquare_diff(r,label,nets):
+    return r-label

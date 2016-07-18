@@ -23,7 +23,7 @@ def parse_argv():
 
 def normalize(dataPath,output):
     segId,label,data=[],[],[]
-    with open(os.path.join(dataPath,'training_data'),'r') as fp:
+    with open(dataPath,'r') as fp:
         for line in fp:
             line=line.strip().split(' ')
             segId.append(line[0])
@@ -34,7 +34,7 @@ def normalize(dataPath,output):
     data=preprocessing.scale(data)
 
     newline=''
-    with open(os.path.join(dataPath,output),'w') as fp:
+    with open(output,'w') as fp:
         for i in range(len(segId)):
             fp.write('%s%s %s' % (newline,segId[i],label[i]))
             for x in data[i]:

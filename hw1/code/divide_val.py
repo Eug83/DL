@@ -74,7 +74,7 @@ def divide_feat(dataPath,trainLabel_dict,testLabel_dict):
                             fp_tr.write(' %s' % (x))
                         train_newline='\n'
                     elif segId in testLabel_dict:
-                        fp_te.write('%s%s %s ' % (test_newline,segId,testLabel_dict[segId]))
+                        fp_te.write('%s%s %s' % (test_newline,segId,testLabel_dict[segId]))
                         for x in feat:
                             fp_te.write(' %s' % (x))
                         test_newline='\n'

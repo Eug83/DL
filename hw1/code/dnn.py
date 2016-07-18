@@ -36,7 +36,7 @@ class DNN():
     def set_defaultParam(self):
         self.struct='39-128-39'
         self.actiFunc='ReLU'
-        self.costFunc='norm1'
+        self.costFunc='meanSquare'
         self.learningRateFunc=0.001
 
         return
@@ -51,6 +51,9 @@ class DNN():
         if self.costFunc=='norm1':
             self.cost=cost.norm1
             self.cost_diff=cost.norm1_diff
+        elif self.costFunc=='meanSquare':
+            self.cost=cost.meanSquare
+            self.cost_diff=cost.meanSquare_diff
         return
 
     def set_learningRateFunc(self):
@@ -90,13 +93,13 @@ class DNN():
         return
 
     def calculate_error(self,label):
-        r,label=self.afterActi[len(self.afterActi)-1],np.matrix(label)
-        return self.cost(r,label)
+        r,label,nets=self.afterActi[len(self.afterActi)-1],np.matrix(label),self.nets
+        return self.cost(r,label,nets)
 
     def backpropagation(self,label):
         batchSize=self.beforeActi[0].shape[1]
-        self.weightGrad=[]
-        delta=np.multiply(self.activate_diff(self.beforeActi[self.layerNum-1]),self.cost_diff(self.afterActi[self.layerNum-1],label))
+        self.weightGrad,nets=[],self.nets
+        delta=np.multiply(self.activate_diff(self.beforeActi[self.layerNum-1]),self.cost_diff(self.afterActi[self.layerNum-1],label,nets))
         oneArr=np.ones((1,batchSize)).astype(dtype='float32')
         a=np.concatenate((self.afterActi[self.layerNum-2],oneArr),axis=0)
         c_partial=np.dot(delta,np.transpose(a))/delta.shape[1]
@@ -116,8 +119,20 @@ class DNN():
             self.nets[i]=self.nets[i]-self.learningRate(self.learningRateFunc)*self.weightGrad[len(self.weightGrad)-1-i]
         return
 
-    def predict(self):
-        return
+    def predict(self,X):
+        r=np.matrix(X).astype(dtype='float32')
+        for net in self.nets:
+            x=np.concatenate((r,np.ones((1,r.shape[1])).astype(dtype='float32')),axis=0)
+            r=self.multi(net.astype(dtype='float32'),x)
+            r=self.activate(r).astype(dtype='float32')
+        return np.argmax(r,axis=0)
+
+    def score(self,r,label):
+        correct,total=0,r.size
+        for i in range(total):
+            if r.item(i)==label.item(i):
+                correct += 1
+        return (correct,total)
 
     def save_model(self):
         return
