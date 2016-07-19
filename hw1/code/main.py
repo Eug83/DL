@@ -118,7 +118,7 @@ def main():
     struct_str=str(featDim)+'-128-'+str(labelNum)
     lastAccu,accu=0.0,0.0
     epochCount=1
-    phonNet=dnn.DNN(struct=struct_str,learningRateFunc=0.002)
+    phonNet=dnn.DNN(struct=struct_str,learningRateFunc=0.01)
     print('Training dnn...')
     while True:
         print('round %d' % (epochCount))

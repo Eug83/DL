@@ -37,7 +37,7 @@ class DNN():
         self.struct='39-128-39'
         self.actiFunc='ReLU'
         self.costFunc='meanSquare'
-        self.learningRateFunc=0.001
+        self.learningRateFunc=0.01
 
         return
 
