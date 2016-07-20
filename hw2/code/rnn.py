@@ -19,6 +19,7 @@ class DNN():
             self.learningRateFunc=learningRateFunc
 
         self.init_net()
+        self.init_memory()
         self.set_actiFunc()
         self.set_costFunc()
         self.set_learningRateFunc()
@@ -33,7 +34,7 @@ class DNN():
 
     def set_defaultParam(self):
         self.actiFunc='ReLU'
-        self.costFunc='meanSquare'
+        self.costFunc='squareEuclDist'
         self.learningRateFunc=0.01
 
         return
@@ -45,9 +46,9 @@ class DNN():
         return
 
     def set_costFunc(self):
-        if self.costFunc=='meanSquare':
-            self.cost=cost.meanSquare
-            self.cost_diff=cost.meanSquare_diff
+        if self.costFunc=='squareEuclDist':
+            self.cost=cost.squareEuclDist
+            self.cost_diff=cost.squareEuclDist_diff
         return
 
     def set_learningRateFunc(self):
@@ -63,14 +64,24 @@ class DNN():
         return
 
     def init_net(self):
-        self.nets=[]
+        self.net=[]
         layer=self.struct.split('-')
         
         i=0
         while i < len(layer)-1:
-            self.nets.append(np.random.randn(int(layer[i+1]),int(layer[i])+1).astype(dtype='float32'))
+            self.net.append(np.random.randn(int(layer[i+1]),int(layer[i])+1).astype(dtype='float32'))
             i += 1
-        self.netNum,self.layerNum=len(self.nets),len(self.nets)+1
+        self.netNum,self.layerNum=len(self.net),len(self.net)+1
+        return
+
+    def init_memory(self):
+        self.memory,self.memoryNet=[],[]
+        layer=self.struct.split('-')
+
+        i=0
+        while i < len(layer):
+            self.memory.append(np.zeros((int(layer[i])+1,1)).astype(dtype='float32'))
+            self.memoryNet.append(np.random.randn(int(layer[i])+1,1)astype(dtype='float32'))
         return
 
     def forward(self,X):
@@ -78,7 +89,7 @@ class DNN():
         self.beforeActi,self.afterActi=[],[]
         self.beforeActi.append(r)
         self.afterActi.append(r)
-        for net in self.nets:
+        for net in self.net:
             x=np.concatenate((r,np.ones((1,r.shape[1])).astype(dtype='float32')),axis=0)
             r=self.multi(net.astype(dtype='float32'),x)
             self.beforeActi.append(r)
@@ -87,12 +98,12 @@ class DNN():
         return
 
     def calculate_error(self,label):
-        r,label,nets=self.afterActi[len(self.afterActi)-1],np.matrix(label),self.nets
+        r,label,nets=self.afterActi[len(self.afterActi)-1],np.matrix(label),self.net
         return self.cost(r,label,nets)
 
     def backpropagation(self,label):
         batchSize=self.beforeActi[0].shape[1]
-        self.weightGrad,nets=[],self.nets
+        self.weightGrad,nets=[],self.net
         delta=np.multiply(self.activate_diff(self.beforeActi[self.layerNum-1]),self.cost_diff(self.afterActi[self.layerNum-1],label,nets))
         oneArr=np.ones((1,batchSize)).astype(dtype='float32')
         a=np.concatenate((self.afterActi[self.layerNum-2],oneArr),axis=0)
@@ -109,13 +120,13 @@ class DNN():
         return
 
     def update(self):
-        for i in range(len(self.nets)):
-            self.nets[i]=self.nets[i]-self.learningRate(self.learningRateFunc)*self.weightGrad[len(self.weightGrad)-1-i]
+        for i in range(len(self.net)):
+            self.net[i]=self.net[i]-self.learningRate(self.learningRateFunc)*self.weightGrad[len(self.weightGrad)-1-i]
         return
 
     def predict(self,X):
         r=np.matrix(X).astype(dtype='float32')
-        for net in self.nets:
+        for net in self.net:
             x=np.concatenate((r,np.ones((1,r.shape[1])).astype(dtype='float32')),axis=0)
             r=self.multi(net.astype(dtype='float32'),x)
             r=self.activate(r).astype(dtype='float32')
