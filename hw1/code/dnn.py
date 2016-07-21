@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import theano
 import numpy as np
 import cost
@@ -7,10 +8,11 @@ import activate
 import learningRate
 
 class DNN():
-    def __init__(self,struct,actiFunc=None,costFunc=None,learningRateFunc=None):
-        self.set_matrixMult()
+    def __init__(self,struct=None,actiFunc=None,costFunc=None,learningRateFunc=None):
+        self.set_matrixDot()
         
         self.set_defaultParam()
+        self.struct=struct
         if actiFunc!=None:
             self.actiFunc=actiFunc
         if costFunc!=None:
@@ -24,11 +26,11 @@ class DNN():
         self.set_learningRateFunc()
         return
 
-    def set_matrixMult(self):
+    def set_matrixDot(self):
         X=theano.tensor.matrix(dtype='float32')
         Y=theano.tensor.matrix(dtype='float32')
         Z=theano.tensor.dot(X,Y)
-        self.multi=theano.function([X,Y],Z)
+        self.dot=theano.function([X,Y],Z)
         return
 
     def set_defaultParam(self):
@@ -80,7 +82,7 @@ class DNN():
         self.afterActi.append(r)
         for net in self.nets:
             x=np.concatenate((r,np.ones((1,r.shape[1])).astype(dtype='float32')),axis=0)
-            r=self.multi(net.astype(dtype='float32'),x)
+            r=self.dot(net.astype(dtype='float32'),x.astype(dtype='float32'))
             self.beforeActi.append(r)
             r=self.activate(r).astype(dtype='float32')
             self.afterActi.append(r)
@@ -96,15 +98,15 @@ class DNN():
         delta=np.multiply(self.activate_diff(self.beforeActi[self.layerNum-1]),self.cost_diff(self.afterActi[self.layerNum-1],label,nets))
         oneArr=np.ones((1,batchSize)).astype(dtype='float32')
         a=np.concatenate((self.afterActi[self.layerNum-2],oneArr),axis=0)
-        c_partial=np.dot(delta,np.transpose(a))/delta.shape[1]
+        c_partial=self.dot(delta.astype(dtype='float32'),np.transpose(a).astype(dtype='float32'))/delta.shape[1]
         self.weightGrad.append(c_partial)
         for i in range(1,self.netNum):
-            x=np.dot(np.transpose(self.nets[self.netNum-i]),delta)
+            x=self.dot(np.transpose(self.nets[self.netNum-i]).astype(dtype='float32'),delta.astype(dtype='float32'))
             x=np.delete(x,x.shape[0]-1,0)
             delta=np.multiply(self.activate_diff(self.beforeActi[self.layerNum-1-i]),x)
             oneArr=np.ones((1,batchSize)).astype(dtype='float32')
             a=np.concatenate((self.afterActi[self.layerNum-2-i],oneArr),axis=0)
-            c_partial=np.dot(delta,np.transpose(a))/delta.shape[1]
+            c_partial=self.dot(delta.astype(dtype='float32'),np.transpose(a).astype(dtype='float32'))/delta.shape[1]
             self.weightGrad.append(c_partial)
         return
 
@@ -117,7 +119,7 @@ class DNN():
         r=np.matrix(X).astype(dtype='float32')
         for net in self.nets:
             x=np.concatenate((r,np.ones((1,r.shape[1])).astype(dtype='float32')),axis=0)
-            r=self.multi(net.astype(dtype='float32'),x)
+            r=self.dot(net.astype(dtype='float32'),x.astype(dtype='float32'))
             r=self.activate(r).astype(dtype='float32')
         return np.argmax(r,axis=0)
 
