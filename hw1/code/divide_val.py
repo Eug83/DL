@@ -1,3 +1,15 @@
+'''
+Description: divide labels and features into training set and validation set
+Parameters:
+    -i: data directory; it should contain: phones/48_39.map, label/train.lab, mfcc/train.ark, fbank/train.ark
+Output:
+    label/train_new.lab,test_new.lab: labels for new training set/validation set
+    mfcc/train_new.ark,test_new.ark: mfcc features
+    fbank/train_new.ark,test_new.ark: fbank features
+Example:
+    python3 divide_val.py -i DATA_DIRECTORY
+'''
+
 import os
 import sys
 

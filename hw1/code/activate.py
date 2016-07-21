@@ -1,6 +1,20 @@
+'''
+Description:activation function and its differential
+Input:
+    matrix:an 2D-array like matrix
+Return value:
+    matrix:an 2D-array like matrix after activation
+'''
+
 import numpy as np
 
 def ReLU(matrix):
+    '''
+    Description:
+        x     ,if x >= 0.0
+        0.0   ,if x < 0.0
+    '''
+
     rowNum,colNum=matrix.shape[0],matrix.shape[1]
     for row in range(rowNum):
         for col in range(colNum):
@@ -14,6 +28,12 @@ def ReLU(matrix):
     return matrix
 
 def ReLU_diff(matrix):
+    '''
+    Description:
+        1     ,if x >= 0.0
+        0.0   ,if x < 0.0
+    '''
+
     rowNum,colNum=matrix.shape[0],matrix.shape[1]
     for row in range(rowNum):
         for col in range(colNum):

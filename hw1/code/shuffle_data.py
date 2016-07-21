@@ -1,3 +1,12 @@
+'''
+Description: shuffle data
+Parameter:
+    -i: input data
+    -o: output file name
+Example:
+    python3 shuffle_data.py -i DATA -o OUTPUT
+'''
+
 import sys
 import random
 

@@ -1,3 +1,14 @@
+'''
+Description: normalize data by (x-mean)/standardDeviation
+Parameter:
+    -i: input data path
+    -o: output file name
+Output:
+    output
+Example:
+    python3 norm_data.py -i DATA_DIRECTORY -o OUTPUT
+'''
+
 import os
 import sys
 import numpy as np
