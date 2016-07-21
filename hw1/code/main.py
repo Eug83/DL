@@ -1,3 +1,16 @@
+'''
+Description: DL hw1
+Parameter:
+    -i: input data directory; it should contain:
+        norm_training_data: normalized training data
+        norm_testing_data: normalized testing data
+        phones/48_39.map: phones map
+    -o: output file name
+    -batch: batch size; default=1000
+Example:
+    python3 main.py -i DATA_DIRECTORY -o OUTPUT -batch 1000
+'''
+
 import os
 import sys
 import dnn
