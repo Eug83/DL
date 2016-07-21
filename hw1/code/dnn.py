@@ -140,6 +140,7 @@ class DNN():
 
         npzfile=np.load('model.npz')
         self.netNum,self.layerNum=len(npzfile.files),len(npzfile.files)+1
+        self.nets=[]
         for i in range(self.netNum):
             name='arr_'+str(i)
             self.nets.append(npzfile[name])
