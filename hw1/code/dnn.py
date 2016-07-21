@@ -131,7 +131,16 @@ class DNN():
         return (correct,total)
 
     def save_model(self):
+        np.savez('model.npz',*self.nets)
         return
 
     def load_model(self):
+        if not os.path.isfile('model.npz'):
+            return
+
+        npzfile=np.load('model.npz')
+        self.netNum,self.layerNum=len(npzfile.files),len(npzfile.files)+1
+        for i in range(self.netNum):
+            name='arr_'+str(i)
+            self.nets.append(npzfile[name])
         return

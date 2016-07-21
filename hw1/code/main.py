@@ -77,8 +77,9 @@ def train(phonNet,phon_dict,dataPath,batchSize,labelNum):
                 phonNet.update()
                 count=0
                 X,y=[],[]
-    phonNet.forward(np.transpose(X))
-    forwardedDataCount += count
+    if count >= 1:
+        phonNet.forward(np.transpose(X))
+        forwardedDataCount += count
     print('Fowarded %d data' % (forwardedDataCount))
     print('Finish forwarding all data')
     return phonNet
@@ -116,11 +117,14 @@ def main():
     phon_dict,labelNum=load_phonDict(dataPath)
 
     struct_str=str(featDim)+'-128-'+str(labelNum)
+    learningRate_str=0.01
     lastAccu,accu=0.0,0.0
     epochCount=1
-    phonNet=dnn.DNN(struct=struct_str,learningRateFunc=0.01)
+    phonNet=dnn.DNN(struct=struct_str,learningRateFunc=learningRate_str)
+    phonNet.load_model()
     print('Training dnn...')
     while True:
+        print('-------------------------------------------')
         print('round %d' % (epochCount))
         phonNet=train(phonNet,phon_dict,dataPath,batchSize,labelNum)
         print('Testing...')
@@ -130,6 +134,8 @@ def main():
         else:
             break
         epochCount += 1
+        phonNet.save_model()
+        print('-------------------------------------------')
     print('Accuracy=%f' % (accu))
     return
 
