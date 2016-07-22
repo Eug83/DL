@@ -16,6 +16,7 @@ import sys
 import dnn
 import time
 import numpy as np
+import shuffle_data
 
 def parse_argv():
     argv=sys.argv
@@ -70,7 +71,11 @@ def load_phonDict(dataPath):
 def train(phonNet,phon_dict,dataPath,batchSize,labelNum):
     count,forwardedDataCount=0,0
     X,y=[],[]
-    with open(os.path.join(dataPath,'norm_training_data'),'r') as fp:
+
+    trainDataPath=os.path.join(dataPath,'norm_training_data')
+    shuffle_data.shuffle(trainDataPath,trainDataPath)
+
+    with open(trainDataPath,'r') as fp:
         for line in fp:
             line=line.strip().split(' ')
             segId,label,feat=line[0],phon_dict[line[1]],[float(x) for x in line[2:]]
