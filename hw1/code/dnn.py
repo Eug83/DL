@@ -149,10 +149,10 @@ class DNN():
         '''
 
         r=np.matrix(X).astype(dtype='float32')
-        self.beforeActi,self.afterActi=[],[]
+        self.beforeActi,self.afterActi,nets=[],[],self.nets
         self.beforeActi.append(r)
         self.afterActi.append(r)
-        for net in self.nets:
+        for net in nets:
             x=np.concatenate((r,np.ones((1,r.shape[1])).astype(dtype='float32')),axis=0)
             r=self.dot(net.astype(dtype='float32'),x.astype(dtype='float32'))
             self.beforeActi.append(r)
@@ -188,14 +188,14 @@ class DNN():
         '''
 
         batchSize=self.beforeActi[0].shape[1]
-        self.weightGrad=[]
-        delta=np.multiply(self.activate_diff(self.beforeActi[self.layerNum-1]),self.cost_diff(self.afterActi[self.layerNum-1],label,self.nets))
+        self.weightGrad,nets=[],self.nets
+        delta=np.multiply(self.activate_diff(self.beforeActi[self.layerNum-1]),self.cost_diff(self.afterActi[self.layerNum-1],label,nets))
         oneArr=np.ones((1,batchSize)).astype(dtype='float32')
         a=np.concatenate((self.afterActi[self.layerNum-2],oneArr),axis=0)
         c_partial=self.dot(delta.astype(dtype='float32'),np.transpose(a).astype(dtype='float32'))/batchSize
         self.weightGrad.append(c_partial)
         for i in range(1,self.netNum):
-            x=self.dot(np.transpose(self.nets[self.netNum-i]).astype(dtype='float32'),delta.astype(dtype='float32'))
+            x=self.dot(np.transpose(nets[self.netNum-i]).astype(dtype='float32'),delta.astype(dtype='float32'))
             x=np.delete(x,x.shape[0]-1,0)
             delta=np.multiply(self.activate_diff(self.beforeActi[self.layerNum-1-i]),x)
             oneArr=np.ones((1,batchSize)).astype(dtype='float32')
