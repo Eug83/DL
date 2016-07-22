@@ -188,8 +188,8 @@ class DNN():
         '''
 
         batchSize=self.beforeActi[0].shape[1]
-        self.weightGrad,nets=[],self.nets
-        delta=np.multiply(self.activate_diff(self.beforeActi[self.layerNum-1]),self.cost_diff(self.afterActi[self.layerNum-1],label,nets))
+        self.weightGrad=[]
+        delta=np.multiply(self.activate_diff(self.beforeActi[self.layerNum-1]),self.cost_diff(self.afterActi[self.layerNum-1],label,self.nets))
         oneArr=np.ones((1,batchSize)).astype(dtype='float32')
         a=np.concatenate((self.afterActi[self.layerNum-2],oneArr),axis=0)
         c_partial=self.dot(delta.astype(dtype='float32'),np.transpose(a).astype(dtype='float32'))/batchSize
