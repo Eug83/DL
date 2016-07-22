@@ -192,7 +192,7 @@ class DNN():
         delta=np.multiply(self.activate_diff(self.beforeActi[self.layerNum-1]),self.cost_diff(self.afterActi[self.layerNum-1],label,nets))
         oneArr=np.ones((1,batchSize)).astype(dtype='float32')
         a=np.concatenate((self.afterActi[self.layerNum-2],oneArr),axis=0)
-        c_partial=self.dot(delta.astype(dtype='float32'),np.transpose(a).astype(dtype='float32'))/delta.shape[1]
+        c_partial=self.dot(delta.astype(dtype='float32'),np.transpose(a).astype(dtype='float32'))/batchSize
         self.weightGrad.append(c_partial)
         for i in range(1,self.netNum):
             x=self.dot(np.transpose(self.nets[self.netNum-i]).astype(dtype='float32'),delta.astype(dtype='float32'))
@@ -200,7 +200,7 @@ class DNN():
             delta=np.multiply(self.activate_diff(self.beforeActi[self.layerNum-1-i]),x)
             oneArr=np.ones((1,batchSize)).astype(dtype='float32')
             a=np.concatenate((self.afterActi[self.layerNum-2-i],oneArr),axis=0)
-            c_partial=self.dot(delta.astype(dtype='float32'),np.transpose(a).astype(dtype='float32'))/delta.shape[1]
+            c_partial=self.dot(delta.astype(dtype='float32'),np.transpose(a).astype(dtype='float32'))/batchSize
             self.weightGrad.append(c_partial)
         return
 
@@ -229,8 +229,9 @@ class DNN():
         '''
 
         r=np.matrix(X).astype(dtype='float32')
+        batchSize=r.shape[1]
         for net in self.nets:
-            x=np.concatenate((r,np.ones((1,r.shape[1])).astype(dtype='float32')),axis=0)
+            x=np.concatenate((r,np.ones((1,batchSize)).astype(dtype='float32')),axis=0)
             r=self.dot(net.astype(dtype='float32'),x.astype(dtype='float32'))
             r=self.activate(r).astype(dtype='float32')
         return np.argmax(r,axis=0)
