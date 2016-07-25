@@ -27,6 +27,7 @@ class DNN():
         '''
 
         self.set_matrixDot()
+        self.set_matrixAdd()
         
         self.set_defaultParam()
         self.struct=struct
@@ -54,6 +55,19 @@ class DNN():
         Y=theano.tensor.matrix(dtype='float32')
         Z=theano.tensor.dot(X,Y)
         self.dot=theano.function([X,Y],Z)
+        return
+
+    def set_matrixAdd(self):
+        '''
+        Description: define theano matrix addition to speed up with gpu
+        Component:
+            self.add=theano.function
+        '''
+
+        X=theano.tensor.matrix(dtype='float32')
+        Y=theano.tensor.matrix(dtype='float32')
+        Z=X+Y
+        self.add=theano.function([X,Y],Z)
         return
 
     def set_defaultParam(self):
