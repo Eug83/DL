@@ -7,6 +7,7 @@ Return value:
 '''
 
 import numpy as np
+import theano
 
 def ReLU(matrix):
     '''
@@ -15,17 +16,11 @@ def ReLU(matrix):
         0.0   ,if x < 0.0
     '''
 
-    rowNum,colNum=matrix.shape[0],matrix.shape[1]
-    for row in range(rowNum):
-        for col in range(colNum):
-            if matrix[row,col] < 0.0:
-                matrix[row,col]=0.0
-#    row,col=matrix.shape[0],matrix.shape[1]
-#    size=row*col
-#    matrix=matrix.flatten()
-#    matrix=list(map(lambda x: x if x >= 0.0 else 0.0,matrix))
-#    matrix=np.matrix(matrix).reshape((row,col))
-    return matrix
+    matrix=matrix.astype(dtype='float32')
+
+    X=theano.tensor.matrix(dtype='float32')
+    f=theano.function([X],theano.tensor.switch(X < 0.0,0.0,X))
+    return f(matrix)
 
 def ReLU_diff(matrix):
     '''
@@ -34,11 +29,8 @@ def ReLU_diff(matrix):
         0.0   ,if x < 0.0
     '''
 
-    rowNum,colNum=matrix.shape[0],matrix.shape[1]
-    for row in range(rowNum):
-        for col in range(colNum):
-            if matrix[row,col] < 0:
-                matrix[row,col]=0
-            else:
-                matrix[row,col]=1
-    return matrix
+    matrix=matrix.astype(dtype='float32')
+
+    X=theano.tensor.matrix(dtype='float32')
+    f=theano.function([X],theano.tensor.switch(X < 0.0,0.0,1))
+    return f(matrix)
