@@ -5,6 +5,7 @@ Description: Deep Neural Network
 import os
 import sys
 import time
+import copy
 import theano
 import numpy as np
 import cost
@@ -138,12 +139,12 @@ class DNN():
             self.layerNum: number of layers; integer
         '''
 
-        self.nets=[]
+        self.nets,self.beforeActi,self.afterActi,self.weightGrad=[],[],[],[]
         layer=self.struct.split('-')
         
         i=0
         while i < len(layer)-1:
-            self.nets.append(np.random.randn(int(layer[i+1]),int(layer[i])+1).astype(dtype='float32'))
+            self.nets.append(np.random.random((int(layer[i+1]),int(layer[i])+1)).astype(dtype='float32'))
             i += 1
         self.netNum,self.layerNum=len(self.nets),len(self.nets)+1
         return
@@ -163,15 +164,21 @@ class DNN():
         '''
 
         r=np.matrix(X).astype(dtype='float32')
-        self.beforeActi,self.afterActi,nets=[],[],self.nets
-        self.beforeActi.append(r)
-        self.afterActi.append(r)
+        self.beforeActi[:]=[]
+        self.afterActi[:]=[]
+        nets=copy.deepcopy(self.nets)
+
+        self.beforeActi.append(copy.deepcopy(r))
+        self.afterActi.append(copy.deepcopy(r))
         for net in nets:
             x=np.concatenate((r,np.ones((1,r.shape[1])).astype(dtype='float32')),axis=0)
-            r=self.dot(net.astype(dtype='float32'),x.astype(dtype='float32'))
-            self.beforeActi.append(r)
-            r=self.activate(r).astype(dtype='float32')
-            self.afterActi.append(r)
+            r=self.dot(net,x)
+            self.beforeActi.append(copy.deepcopy(r))
+            r=self.activate(r)
+            self.afterActi.append(copy.deepcopy(r))
+        raw=self.afterActi.pop()
+        res=activate.softMax(raw)
+        self.afterActi.append(copy.deepcopy(res))
         return
 
     def calculate_error(self,label):
@@ -185,7 +192,7 @@ class DNN():
             d.calculate_error(label)
         '''
 
-        r,label,nets=self.afterActi[len(self.afterActi)-1],np.matrix(label),self.nets
+        r,label,nets=copy.deepcopy(self.afterActi[-1]),np.matrix(label).astype(dtype='float32'),copy.deepcopy(self.nets)
         return self.cost(r,label,nets)
 
     def backpropagation(self,label):
@@ -202,20 +209,25 @@ class DNN():
         '''
 
         batchSize=self.beforeActi[0].shape[1]
-        self.weightGrad,nets=[],self.nets
-        delta=np.multiply(self.activate_diff(self.beforeActi[self.layerNum-1]),self.cost_diff(self.afterActi[self.layerNum-1],label,nets))
+        self.weightGrad[:]=[]
+        label,nets=np.matrix(label).astype(dtype='float32'),copy.deepcopy(self.nets)
+        beforeActi,afterActi=copy.deepcopy(self.beforeActi),copy.deepcopy(self.afterActi)
+
+        delta=np.multiply(self.activate_diff(beforeActi[-1]),self.cost_diff(afterActi[-1],label,nets))
+        a,b=self.activate_diff(beforeActi[-1]),self.cost_diff(afterActi[-1],label,nets)#debug
         oneArr=np.ones((1,batchSize)).astype(dtype='float32')
-        a=np.concatenate((self.afterActi[self.layerNum-2],oneArr),axis=0)
-        c_partial=self.dot(delta.astype(dtype='float32'),np.transpose(a).astype(dtype='float32'))/batchSize
-        self.weightGrad.append(c_partial)
+        a=np.concatenate((afterActi[self.layerNum-2],oneArr),axis=0)
+        c_partial=self.dot(delta,np.transpose(a))/batchSize
+        self.weightGrad.append(copy.deepcopy(c_partial))
         for i in range(1,self.netNum):
-            x=self.dot(np.transpose(nets[self.netNum-i]).astype(dtype='float32'),delta.astype(dtype='float32'))
+            x=self.dot(np.transpose(nets[self.netNum-i]),delta)
             x=np.delete(x,x.shape[0]-1,0)
-            delta=np.multiply(self.activate_diff(self.beforeActi[self.layerNum-1-i]),x)
+            delta=np.multiply(self.activate_diff(beforeActi[self.layerNum-1-i]),x)
             oneArr=np.ones((1,batchSize)).astype(dtype='float32')
-            a=np.concatenate((self.afterActi[self.layerNum-2-i],oneArr),axis=0)
-            c_partial=self.dot(delta.astype(dtype='float32'),np.transpose(a).astype(dtype='float32'))/batchSize
-            self.weightGrad.append(c_partial)
+            a=np.concatenate((afterActi[self.layerNum-2-i],oneArr),axis=0)
+            c_partial=self.dot(delta,np.transpose(a))/batchSize
+            self.weightGrad.append(copy.deepcopy(c_partial))
+        self.weightGrad.reverse()
         return
 
     def update(self):
@@ -228,7 +240,7 @@ class DNN():
         '''
 
         for i in range(len(self.nets)):
-            self.nets[i]=self.nets[i]-self.learningRate(self.learningRateFunc)*self.weightGrad[len(self.weightGrad)-1-i]
+            self.nets[i]=self.nets[i]-self.learningRate(self.learningRateFunc)*self.weightGrad[i]
         return
 
     def predict(self,X):
@@ -244,10 +256,12 @@ class DNN():
 
         r=np.matrix(X).astype(dtype='float32')
         batchSize=r.shape[1]
-        for net in self.nets:
+        nets=copy.deepcopy(self.nets)
+
+        for net in nets:
             x=np.concatenate((r,np.ones((1,batchSize)).astype(dtype='float32')),axis=0)
-            r=self.dot(net.astype(dtype='float32'),x.astype(dtype='float32'))
-            r=self.activate(r).astype(dtype='float32')
+            r=self.dot(net,x)
+            r=self.activate(r)
         return np.argmax(r,axis=0)
 
     def score(self,r,label):
@@ -293,8 +307,8 @@ class DNN():
 
         npzfile=np.load('model.npz')
         self.netNum,self.layerNum=len(npzfile.files),len(npzfile.files)+1
-        self.nets=[]
+        self.nets[:]=[]
         for i in range(self.netNum):
             name='arr_'+str(i)
-            self.nets.append(npzfile[name])
+            self.nets.append(copy.deepcopy(npzfile[name]))
         return

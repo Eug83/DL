@@ -85,7 +85,7 @@ def train(phonNet,phon_dict,dataPath,batchSize,labelNum):
             y.append(tmpY)
             count += 1
             if count >= batchSize:
-                X,y=np.matrix(X),np.matrix(y)
+                X,y=np.matrix(X).astype(dtype='float32'),np.matrix(y).astype(dtype='float32')
                 phonNet.forward(np.transpose(X))
                 forwardedDataCount += count
                 if (forwardedDataCount/batchSize)%10==0:
