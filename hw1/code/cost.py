@@ -20,9 +20,14 @@ def meanSquare(r,label,nets):
     cost=np.mean(np.multiply(x,x))
     return cost
 
+
 def meanSquare_diff(r,label,nets):
     '''
     Description:r_n-label_n
     '''
 
     return r-label
+
+
+def crossEntropy(r,label,nets):
+    return

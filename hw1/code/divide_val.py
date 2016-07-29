@@ -60,12 +60,12 @@ def divide_label(dataPath,phon_dict):
                 for line in fp:
                     line=line.strip().split(',')
                     if count <= int(segCount*0.9):
-                        fp_tr.write('%s%s,%s' % (train_newline,line[0],phon_dict[line[1]]))
-                        trainLabel_dict[line[0]]=phon_dict[line[1]]
+                        fp_tr.write('%s%s,%s' % (train_newline,line[0],line[1]))
+                        trainLabel_dict[line[0]]=line[1]
                         train_newline='\n'
                     else:
-                        fp_te.write('%s%s,%s\n' % (test_newline,line[0],phon_dict[line[1]]))
-                        testLabel_dict[line[0]]=phon_dict[line[1]]
+                        fp_te.write('%s%s,%s\n' % (test_newline,line[0],line[1]))
+                        testLabel_dict[line[0]]=line[1]
                         test_newline='\n'
                     count += 1
     return (trainLabel_dict,testLabel_dict)

@@ -13,7 +13,7 @@ import activate
 import learningRate
 
 class DNN():
-    def __init__(self,struct=None,actiFunc=None,costFunc=None,learningRateFunc=None):
+    def __init__(self,struct=None,actiFunc=None,costFunc=None,learningRateFunc=None,momentum=None):
         '''
         Description: initialize dnn model
         Parameters:
@@ -24,7 +24,7 @@ class DNN():
         Component:
             self.struct: string
         Example:
-            d=dnn.DNN(struct='39-128-40',actiFunc='ReLU',costFunc='meanSquare',learningRateFunc=0.01)
+            d=dnn.DNN(struct='39-128-40',actiFunc='ReLU',costFunc='meanSquare',learningRateFunc=0.025)
         '''
 
         self.set_matrixDot()
@@ -38,6 +38,8 @@ class DNN():
             self.costFunc=costFunc
         if learningRateFunc!=None:
             self.learningRateFunc=learningRateFunc
+        if momentum!=None:
+            self.momentum=momentum
 
         self.init_net()
         self.set_actiFunc()
@@ -82,7 +84,8 @@ class DNN():
 
         self.actiFunc='ReLU'
         self.costFunc='meanSquare'
-        self.learningRateFunc=0.01
+        self.learningRateFunc=0.025
+        self.momentum=0.5
 
         return
 
@@ -97,6 +100,12 @@ class DNN():
         if self.actiFunc=='ReLU':
             self.activate=activate.ReLU
             self.activate_diff=activate.ReLU_diff
+        elif self.actiFunc=='sigmoid':
+            self.activate=activate.sigmoid
+            self.activate_diff=activate.sigmoid_diff
+        elif self.actiFunc=='test':
+            self.activate=activate.test
+            self.activate_diff=activate.test_diff
         return
 
     def set_costFunc(self):
@@ -139,12 +148,13 @@ class DNN():
             self.layerNum: number of layers; integer
         '''
 
-        self.nets,self.beforeActi,self.afterActi,self.weightGrad=[],[],[],[]
+        self.nets,self.beforeActi,self.afterActi,self.updateGrad,self.lastGrad=[],[],[],[],[]
         layer=self.struct.split('-')
         
         i=0
         while i < len(layer)-1:
             self.nets.append(np.random.random((int(layer[i+1]),int(layer[i])+1)).astype(dtype='float32'))
+            self.updateGrad.append(np.zeros((int(layer[i+1]),int(layer[i])+1)).astype(dtype='float32'))
             i += 1
         self.netNum,self.layerNum=len(self.nets),len(self.nets)+1
         return
@@ -203,13 +213,14 @@ class DNN():
         Return:
             None
         Component:
-            self.weightGrad: gradients to be updated; format same as self.nets but in reverse order
+            self.updateGrad: gradients to be updated; format same as self.nets but in reverse order
         Example:
             d.backpropagation(label)
         '''
 
         batchSize=self.beforeActi[0].shape[1]
-        self.weightGrad[:]=[]
+        self.lastGrad=copy.deepcopy(self.updateGrad)
+        self.updateGrad[:]=[]
         label,nets=np.matrix(label).astype(dtype='float32'),copy.deepcopy(self.nets)
         beforeActi,afterActi=copy.deepcopy(self.beforeActi),copy.deepcopy(self.afterActi)
 
@@ -218,7 +229,10 @@ class DNN():
         oneArr=np.ones((1,batchSize)).astype(dtype='float32')
         a=np.concatenate((afterActi[self.layerNum-2],oneArr),axis=0)
         c_partial=self.dot(delta,np.transpose(a))/batchSize
-        self.weightGrad.append(copy.deepcopy(c_partial))
+        if not self.momentum==-1:
+            self.updateGrad.append(self.momentum*self.lastGrad[-1]-(1.0-self.momentum)*self.learningRate(self.learningRateFunc)*c_partial)
+        else:
+            self.updateGrad.append((-1)*self.learningRate(self.learningRateFunc)*c_partial)
         for i in range(1,self.netNum):
             x=self.dot(np.transpose(nets[self.netNum-i]),delta)
             x=np.delete(x,x.shape[0]-1,0)
@@ -226,8 +240,11 @@ class DNN():
             oneArr=np.ones((1,batchSize)).astype(dtype='float32')
             a=np.concatenate((afterActi[self.layerNum-2-i],oneArr),axis=0)
             c_partial=self.dot(delta,np.transpose(a))/batchSize
-            self.weightGrad.append(copy.deepcopy(c_partial))
-        self.weightGrad.reverse()
+            if not self.momentum==-1:
+                self.updateGrad.append(self.momentum*self.lastGrad[self.netNum-1-i]-(1.0-self.momentum)*self.learningRate(self.learningRateFunc)*c_partial)
+            else:
+                self.updateGrad.append((-1)*self.learningRate(self.learningRateFunc)*c_partial)
+        self.updateGrad.reverse()
         return
 
     def update(self):
@@ -239,8 +256,8 @@ class DNN():
             d.update()
         '''
 
-        for i in range(len(self.nets)):
-            self.nets[i]=self.nets[i]-self.learningRate(self.learningRateFunc)*self.weightGrad[i]
+        for i in range(self.netNum):
+            self.nets[i]=self.nets[i]+self.updateGrad[i]
         return
 
     def predict(self,X):

@@ -57,18 +57,21 @@ def get_featDim(dataPath):
 
 
 def load_phonDict(dataPath):
-    d=dict()
+    phon48_dict,phon39_dict,phon_map=dict(),dict(),dict()
     with open(os.path.join(dataPath,'phones/48_39.map'),'r') as fp:
-        labelCount=0
+        label48Count,label39Count=0,0
         for line in fp:
             line=line.strip().split('\t')
-            if line[1] not in d:
-                d[line[1]]=labelCount
-                labelCount += 1
-    return (d,labelCount)
+            phon48_dict[line[0]]=label48Count
+            label48Count += 1
+            if line[1] not in phon39_dict:
+                phon39_dict[line[1]]=label39Count
+                label39Count += 1
+            phon_map[phon48_dict[line[0]]]=phon39_dict[line[1]]
+    return (phon48_dict,phon39_dict,phon_map,label48Count)
 
 
-def train(phonNet,phon_dict,dataPath,batchSize,labelNum):
+def train(phonNet,phonCount_dict,dataPath,batchSize,labelNum):
     count,forwardedDataCount=0,0
     X,y=[],[]
 
@@ -78,7 +81,7 @@ def train(phonNet,phon_dict,dataPath,batchSize,labelNum):
     with open(trainDataPath,'r') as fp:
         for line in fp:
             line=line.strip().split(' ')
-            segId,label,feat=line[0],phon_dict[line[1]],[float(x) for x in line[2:]]
+            segId,label,feat=line[0],phonCount_dict[line[1]],[float(x) for x in line[2:]]
             X.append(feat)
             tmpY=[0]*labelNum
             tmpY[label]=1.0
@@ -103,7 +106,7 @@ def train(phonNet,phon_dict,dataPath,batchSize,labelNum):
     return phonNet
 
 
-def test(phonNet,phon_dict,dataPath,batchSize,labelNum):
+def test(phonNet,phon48_dict,phon_map,dataPath,batchSize,labelNum):
     correct,totalCount=0,0
     count=0
     X,y=[],[]
@@ -111,13 +114,15 @@ def test(phonNet,phon_dict,dataPath,batchSize,labelNum):
     with open(os.path.join(dataPath,'norm_testing_data'),'r') as fp:
         for line in fp:
             line=line.strip().split(' ')
-            segId,label,feat=line[0],phon_dict[line[1]],[float(x) for x in line[2:]]
+            segId,label,feat=line[0],phon_map[phon48_dict[line[1]]],[float(x) for x in line[2:]]
             X.append(feat)
             y.append(label)
             count += 1
             if count >= batchSize:
                 X=np.matrix(X)
                 r=phonNet.predict(np.transpose(X))
+                for i in range(len(r)):
+                    r[i]=phon_map[r[i]]
                 tmpCor,tmpTotal=phonNet.score(np.array(r),np.array(y))
                 correct += tmpCor
                 totalCount += tmpTotal
@@ -132,21 +137,23 @@ def main():
     dataPath,outFile,batchSize=parse_argv()
     featDim,dataSize=get_featDim(dataPath)
     print('Training data size=%d' % (dataSize))
-    phon_dict,labelNum=load_phonDict(dataPath)
+    phon48_dict,phon39_dict,phon_map,labelNum=load_phonDict(dataPath)
 
     struct_str=str(featDim)+'-128-'+str(labelNum)
-    learningRate_str=0.01
+    learningRate_str=0.025
+    actiFunc_str='ReLU'
+    momentum_float=0.4
     lastAccu,accu=0.0,0.0
     epochCount=1
-    phonNet=dnn.DNN(struct=struct_str,learningRateFunc=learningRate_str)
+    phonNet=dnn.DNN(struct=struct_str,learningRateFunc=learningRate_str,actiFunc=actiFunc_str,momentum=momentum_float)
     phonNet.load_model()
     print('Training dnn...')
     while True:
         print('-------------------------------------------')
         print('round %d' % (epochCount))
-        phonNet=train(phonNet,phon_dict,dataPath,batchSize,labelNum)
+        phonNet=train(phonNet,phon48_dict,dataPath,batchSize,labelNum)
         print('Testing...')
-        phonNet,accu=test(phonNet,phon_dict,dataPath,batchSize,labelNum)
+        phonNet,accu=test(phonNet,phon48_dict,phon_map,dataPath,batchSize,labelNum)
         if accu > lastAccu:
             lastAccu=accu
         else:

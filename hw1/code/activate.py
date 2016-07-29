@@ -34,6 +34,38 @@ def ReLU_diff(matrix):
     return f(matrix)
 
 
+def sigmoid(matrix):
+    '''
+    Description: 1/(1+e**(-x))
+    '''
+
+    X=theano.tensor.matrix(dtype='float32')
+    f=theano.function([X],1/(1+theano.tensor.exp((-1)*X)))
+    return f(matrix)
+
+
+def sigmoid_diff(matrix):
+    '''
+    Description: e**(-x)/(1+e**(-x))**2
+    '''
+
+    X=theano.tensor.matrix(dtype='float32')
+    f=theano.function([X],theano.tensor.exp((-1)*X)/((1+theano.tensor.exp((-1)*X))**2))
+    return f(matrix)
+
+
+def test(matrix):
+    X=theano.tensor.matrix(dtype='float32')
+    f=theano.function([X],theano.tensor.switch(X < 0.0,0.0,0.5*(X**2)))
+    return f(matrix)
+
+
+def test_diff(matrix):
+    X=theano.tensor.matrix(dtype='float32')
+    f=theano.function([X],theano.tensor.switch(X < 0.0,0.0,X))
+    return f(matrix)
+
+
 def softMax(matrix):
     '''
     Description:
