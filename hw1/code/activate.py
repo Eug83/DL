@@ -22,7 +22,7 @@ def ReLU(matrix):
     return f(matrix)
 
 
-def ReLU_diff(matrix):
+def ReLU_diff(matrix,label=None):
     '''
     Description:
         1     ,if x >= 0.0
@@ -44,7 +44,7 @@ def sigmoid(matrix):
     return f(matrix)
 
 
-def sigmoid_diff(matrix):
+def sigmoid_diff(matrix,label=None):
     '''
     Description: e**(-x)/(1+e**(-x))**2
     '''
@@ -60,7 +60,7 @@ def test(matrix):
     return f(matrix)
 
 
-def test_diff(matrix):
+def test_diff(matrix,label=None):
     X=theano.tensor.matrix(dtype='float32')
     f=theano.function([X],theano.tensor.switch(X < 0.0,0.0,X))
     return f(matrix)
@@ -77,4 +77,15 @@ def softMax(matrix):
     matrix=preprocessing.scale(matrix)
     matrix=f(matrix)
     r=matrix/np.sum(matrix,axis=0)
+    return r
+
+
+def softMax_diff(matrix,label=None):
+    row=np.argmax(label,axis=0)
+    col=range(label.shape[1])
+    x=np.matrix(np.zeros((label.shape[0],label.shape[1])).astype(dtype='float32'))
+    x[row,col]=np.float32(1.0)
+    y_r=np.matrix(matrix[row,col])
+    y_r=np.repeat(y_r,label.shape[0],axis=0)
+    r=(np.float32(-1.0))*np.multiply(y_r,matrix-x)
     return r

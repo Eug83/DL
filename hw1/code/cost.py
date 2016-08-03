@@ -18,7 +18,10 @@ def meanSquare(r,label,nets):
 
     x=0.5*np.linalg.norm(r-label,ord=2,axis=0)
     cost=np.mean(np.multiply(x,x))
-    return cost
+    weightSum=0.0
+    for net in nets:
+        weightSum += np.sum(net)
+    return (cost,weightSum)
 
 
 def meanSquare_diff(r,label,nets):
@@ -30,4 +33,21 @@ def meanSquare_diff(r,label,nets):
 
 
 def crossEntropy(r,label,nets):
-    return
+    row=np.argmax(label,axis=0)
+    col=range(r.shape[1])
+    x=r[row,col]
+    cost=np.mean((-1.0)*np.log(x))
+    weightSum=0.0
+    for net in nets:
+        weightSum += np.sum(net)
+    return (cost,weightSum)
+
+
+def crossEntropy_diff(r,label,nets):
+    row=np.argmax(label,axis=0)
+    col=range(r.shape[1])
+    x=r[row,col]
+    x=(np.float32(-1.0))*np.reciprocal(x)
+    x=np.matrix(x).astype(dtype='float32').reshape((1,r.shape[1]))
+    x=np.repeat(x,r.shape[0],axis=0)
+    return x

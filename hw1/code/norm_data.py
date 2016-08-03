@@ -40,6 +40,7 @@ def normalize(dataPath,output):
             segId.append(line[0])
             label.append(line[1])
             feat=[float(x) for x in line[2:]]
+#            feat=[float(x) for x in line[1:]]#normalize test data
             data.append(feat)
     
     data=preprocessing.scale(data)
@@ -48,6 +49,7 @@ def normalize(dataPath,output):
     with open(output,'w') as fp:
         for i in range(len(segId)):
             fp.write('%s%s %s' % (newline,segId[i],label[i]))
+#            fp.write('%s%s' % (newline,segId[i]))#normalize test data
             for x in data[i]:
                 fp.write(' %f' % (x))
             newline='\n'

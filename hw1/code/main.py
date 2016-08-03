@@ -93,7 +93,8 @@ def train(phonNet,phonCount_dict,dataPath,batchSize,labelNum):
                 forwardedDataCount += count
                 if (forwardedDataCount/batchSize)%10==0:
                     print('Fowarded %d data' % (forwardedDataCount))
-                    print('Cost=%f' % (phonNet.calculate_error(np.transpose(y))))
+                    cost,weightSum=phonNet.calculate_error(np.transpose(y))
+                    print('Cost=%f; sum of weight=%f' % (cost,weightSum))
                 phonNet.backpropagation(np.transpose(y))
                 phonNet.update()
                 count=0
@@ -119,7 +120,7 @@ def test(phonNet,phon48_dict,phon_map,dataPath,batchSize,labelNum):
             y.append(label)
             count += 1
             if count >= batchSize:
-                X=np.matrix(X)
+                X=np.matrix(X).astype(dtype='float32')
                 r=phonNet.predict(np.transpose(X))
                 for i in range(len(r)):
                     r[i]=phon_map[r[i]]
@@ -128,6 +129,13 @@ def test(phonNet,phon48_dict,phon_map,dataPath,batchSize,labelNum):
                 totalCount += tmpTotal
                 X,y=[],[]
                 count=0
+        X=np.matrix(X).astype(dtype='float32')
+        r=phonNet.predict(np.transpose(X))
+        for i in range(len(r)):
+            r[i]=phon_map[r[i]]
+        tmpCor,tmpTotal=phonNet.score(np.array(r),np.array(y))
+        correct += tmpCor
+        totalCount += tmpTotal
     accuracy=float(correct)/float(totalCount)
     print('Accuracy=%f' % (accuracy))
     return (phonNet,accuracy)
@@ -140,12 +148,15 @@ def main():
     phon48_dict,phon39_dict,phon_map,labelNum=load_phonDict(dataPath)
 
     struct_str=str(featDim)+'-128-'+str(labelNum)
-    learningRate_str=0.025
+    learningRate_str=0.01
     actiFunc_str='ReLU'
-    momentum_float=0.4
+    costFunc_str='meanSquare'
+    momentum_float=0.9
+    dropout_float=-1
+    weightPenalty_float=0.0001
     lastAccu,accu=0.0,0.0
     epochCount=1
-    phonNet=dnn.DNN(struct=struct_str,learningRateFunc=learningRate_str,actiFunc=actiFunc_str,momentum=momentum_float)
+    phonNet=dnn.DNN(struct=struct_str,learningRateFunc=learningRate_str,actiFunc=actiFunc_str,costFunc=costFunc_str,momentum=momentum_float,dropout=dropout_float,weightPenalty=weightPenalty_float)
     phonNet.load_model()
     print('Training dnn...')
     while True:

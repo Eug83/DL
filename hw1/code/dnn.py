@@ -13,7 +13,7 @@ import activate
 import learningRate
 
 class DNN():
-    def __init__(self,struct=None,actiFunc=None,costFunc=None,learningRateFunc=None,momentum=None):
+    def __init__(self,struct=None,actiFunc=None,costFunc=None,learningRateFunc=None,momentum=None,dropout=None,weightPenalty=None):
         '''
         Description: initialize dnn model
         Parameters:
@@ -28,6 +28,7 @@ class DNN():
         '''
 
         self.set_matrixDot()
+        self.set_matrixMultiply()
         self.set_matrixAdd()
         
         self.set_defaultParam()
@@ -40,6 +41,10 @@ class DNN():
             self.learningRateFunc=learningRateFunc
         if momentum!=None:
             self.momentum=momentum
+        if dropout!=None:
+            self.dropout=dropout
+        if weightPenalty!=None:
+            self.weightPenalty=weightPenalty
 
         self.init_net()
         self.set_actiFunc()
@@ -58,6 +63,13 @@ class DNN():
         Y=theano.tensor.matrix(dtype='float32')
         Z=theano.tensor.dot(X,Y)
         self.dot=theano.function([X,Y],Z)
+        return
+
+    def set_matrixMultiply(self):
+        X=theano.tensor.matrix(dtype='float32')
+        Y=theano.tensor.matrix(dtype='float32')
+        Z=X*Y
+        self.multiply=theano.function([X,Y],Z)
         return
 
     def set_matrixAdd(self):
@@ -83,9 +95,11 @@ class DNN():
         '''
 
         self.actiFunc='ReLU'
-        self.costFunc='meanSquare'
+        self.costFunc='crossEntropy'
         self.learningRateFunc=0.025
         self.momentum=0.5
+        self.dropout=0.5
+        self.weightPenalty=0.0001
 
         return
 
@@ -100,12 +114,18 @@ class DNN():
         if self.actiFunc=='ReLU':
             self.activate=activate.ReLU
             self.activate_diff=activate.ReLU_diff
+            self.outputActivate=activate.ReLU#modify
+            self.outputActivate_diff=activate.ReLU_diff#modify
         elif self.actiFunc=='sigmoid':
             self.activate=activate.sigmoid
             self.activate_diff=activate.sigmoid_diff
+            self.outputActivate=activate.sigmoid
+            self.outputActivate_diff=activate.sigmoid_diff
         elif self.actiFunc=='test':
             self.activate=activate.test
             self.activate_diff=activate.test_diff
+            self.outputActivate=activate.test
+            self.outputActivate_diff=activate.test_diff
         return
 
     def set_costFunc(self):
@@ -119,6 +139,9 @@ class DNN():
         if self.costFunc=='meanSquare':
             self.cost=cost.meanSquare
             self.cost_diff=cost.meanSquare_diff
+        elif self.costFunc=='crossEntropy':
+            self.cost=cost.crossEntropy
+            self.cost_diff=cost.crossEntropy_diff
         return
 
     def set_learningRateFunc(self):
@@ -143,7 +166,7 @@ class DNN():
         '''
         Description: initialize neural nets
         Component:
-            self.nets: an list of m by n matrice where m is the number of neuraons in the second layer and n is the number of neurons in the first layer plus one
+            self.nets: a list of m by n matrice where m is the number of neuraons in the second layer and n is the number of neurons in the first layer plus one
             self.netNum: number of nets; integer
             self.layerNum: number of layers; integer
         '''
@@ -153,7 +176,8 @@ class DNN():
         
         i=0
         while i < len(layer)-1:
-            self.nets.append(np.random.random((int(layer[i+1]),int(layer[i])+1)).astype(dtype='float32'))
+            #initialize weight with mean=0, variance=0.1
+            self.nets.append(np.random.normal(0.0,0.01,(int(layer[i+1]),int(layer[i])+1)).astype(dtype='float32'))
             self.updateGrad.append(np.zeros((int(layer[i+1]),int(layer[i])+1)).astype(dtype='float32'))
             i += 1
         self.netNum,self.layerNum=len(self.nets),len(self.nets)+1
@@ -180,15 +204,21 @@ class DNN():
 
         self.beforeActi.append(copy.deepcopy(r))
         self.afterActi.append(copy.deepcopy(r))
-        for net in nets:
+        for i in range(self.netNum):
             x=np.concatenate((r,np.ones((1,r.shape[1])).astype(dtype='float32')),axis=0)
-            r=self.dot(net,x)
+            r=self.dot(nets[i],x)
+            if self.dropout!=-1 and i != (self.netNum-1):
+                arr=np.random.random(size=r.shape[0]).astype(dtype='float32').tolist()
+                arr=list(map(lambda x:0.0 if x < self.dropout else 1.0,arr))
+                arr=np.matrix(arr).astype(dtype='float32').reshape((r.shape[0],1))
+                arr=np.repeat(arr,r.shape[1],axis=1)
+                r=self.multiply(r,arr)
             self.beforeActi.append(copy.deepcopy(r))
-            r=self.activate(r)
+            if i==self.netNum-1:
+                r=self.outputActivate(r)
+            else:
+                r=self.activate(r)
             self.afterActi.append(copy.deepcopy(r))
-        raw=self.afterActi.pop()
-        res=activate.softMax(raw)
-        self.afterActi.append(copy.deepcopy(res))
         return
 
     def calculate_error(self,label):
@@ -202,7 +232,12 @@ class DNN():
             d.calculate_error(label)
         '''
 
-        r,label,nets=copy.deepcopy(self.afterActi[-1]),np.matrix(label).astype(dtype='float32'),copy.deepcopy(self.nets)
+        r,label,nets=self.afterActi[-1],np.matrix(label).astype(dtype='float32'),[]#copy afterActi
+        if self.dropout!=-1:
+            for i in range(self.netNum):
+                nets.append(self.nets[i]*(1.0-self.dropout))
+        else:
+            nets=copy.deepcopy(self.nets)
         return self.cost(r,label,nets)
 
     def backpropagation(self,label):
@@ -224,15 +259,15 @@ class DNN():
         label,nets=np.matrix(label).astype(dtype='float32'),copy.deepcopy(self.nets)
         beforeActi,afterActi=copy.deepcopy(self.beforeActi),copy.deepcopy(self.afterActi)
 
-        delta=np.multiply(self.activate_diff(beforeActi[-1]),self.cost_diff(afterActi[-1],label,nets))
-        a,b=self.activate_diff(beforeActi[-1]),self.cost_diff(afterActi[-1],label,nets)#debug
+        delta=np.multiply(self.outputActivate_diff(beforeActi[-1],label),self.cost_diff(afterActi[-1],label,nets))
         oneArr=np.ones((1,batchSize)).astype(dtype='float32')
         a=np.concatenate((afterActi[self.layerNum-2],oneArr),axis=0)
         c_partial=self.dot(delta,np.transpose(a))/batchSize
         if not self.momentum==-1:
-            self.updateGrad.append(self.momentum*self.lastGrad[-1]-(1.0-self.momentum)*self.learningRate(self.learningRateFunc)*c_partial)
+            updateGrad=self.momentum*self.lastGrad[-1]-(1.0-self.momentum)*self.learningRate(self.learningRateFunc)*c_partial
         else:
-            self.updateGrad.append((-1)*self.learningRate(self.learningRateFunc)*c_partial)
+            updateGrad=(-1)*self.learningRate(self.learningRateFunc)*c_partial
+        self.updateGrad.append(updateGrad-nets[-1]*self.weightPenalty)
         for i in range(1,self.netNum):
             x=self.dot(np.transpose(nets[self.netNum-i]),delta)
             x=np.delete(x,x.shape[0]-1,0)
@@ -241,9 +276,10 @@ class DNN():
             a=np.concatenate((afterActi[self.layerNum-2-i],oneArr),axis=0)
             c_partial=self.dot(delta,np.transpose(a))/batchSize
             if not self.momentum==-1:
-                self.updateGrad.append(self.momentum*self.lastGrad[self.netNum-1-i]-(1.0-self.momentum)*self.learningRate(self.learningRateFunc)*c_partial)
+                updateGrad=self.momentum*self.lastGrad[self.netNum-1-i]-(1.0-self.momentum)*self.learningRate(self.learningRateFunc)*c_partial
             else:
-                self.updateGrad.append((-1)*self.learningRate(self.learningRateFunc)*c_partial)
+                updateGrad=(-1)*self.learningRate(self.learningRateFunc)*c_partial
+            self.updateGrad.append(updateGrad-nets[self.netNum-1-i]*self.weightPenalty)
         self.updateGrad.reverse()
         return
 
@@ -258,6 +294,7 @@ class DNN():
 
         for i in range(self.netNum):
             self.nets[i]=self.nets[i]+self.updateGrad[i]
+        self.learningRateFunc *= 0.9999#debug
         return
 
     def predict(self,X):
@@ -273,12 +310,20 @@ class DNN():
 
         r=np.matrix(X).astype(dtype='float32')
         batchSize=r.shape[1]
-        nets=copy.deepcopy(self.nets)
+        nets=[]
+        if self.dropout!=-1:
+            for i in range(self.netNum):
+                nets.append(self.nets[i]*(1.0-self.dropout))
+        else:
+            nets=copy.deepcopy(self.nets)
 
-        for net in nets:
+        for i in range(self.netNum):
             x=np.concatenate((r,np.ones((1,batchSize)).astype(dtype='float32')),axis=0)
-            r=self.dot(net,x)
-            r=self.activate(r)
+            r=self.dot(nets[i],x)
+            if i != self.netNum-1:
+                r=self.activate(r)
+            else:
+                r=self.outputActivate(r)
         return np.argmax(r,axis=0)
 
     def score(self,r,label):
