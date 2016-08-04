@@ -153,7 +153,7 @@ def main():
     phon48_dict,phon39_dict,phon_map,labelNum=load_phonDict(dataPath)
 
     struct_str=str(featDim)+'-256-'+str(labelNum)
-    learningRate_str=0.05
+    learningRate_str=0.07
     actiFunc_str='ReLU'
     costFunc_str='meanSquare'
     momentum_float=0.1

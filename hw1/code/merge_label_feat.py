@@ -7,7 +7,7 @@ Output:
     mfcc/train_new.ark,test_new.ark: mfcc features
     fbank/train_new.ark,test_new.ark: fbank features
 Example:
-    python3 divide_val.py -i DATA_DIRECTORY
+    python3 merge_label_feat.py -i DATA_DIRECTORY
 '''
 
 import os
