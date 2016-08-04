@@ -40,7 +40,6 @@ def normalize(dataPath,output):
             segId.append(line[0])
             label.append(line[1])
             feat=[float(x) for x in line[2:]]
-#            feat=[float(x) for x in line[1:]]#normalize test data
             data.append(feat)
     
     data=preprocessing.scale(data)

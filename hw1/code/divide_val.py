@@ -45,7 +45,7 @@ def load_phonTable(dataPath):
 
 def divide_label(dataPath,phon_dict):
 
-    path=os.path.join(dataPath,'label/train.lab')
+    path=os.path.join(dataPath,'label/train_shuffle.lab')
     segCount=0
     trainLabel_dict,testLabel_dict=dict(),dict()
     with open(path,'r') as fp:

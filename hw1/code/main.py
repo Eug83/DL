@@ -91,7 +91,7 @@ def train(phonNet,phonCount_dict,dataPath,batchSize,labelNum):
                 X,y=np.matrix(X).astype(dtype='float32'),np.matrix(y).astype(dtype='float32')
                 phonNet.forward(np.transpose(X))
                 forwardedDataCount += count
-                if (forwardedDataCount/batchSize)%10==0:
+                if (forwardedDataCount/batchSize)%100==0:
                     print('Fowarded %d data' % (forwardedDataCount))
                     cost,weightSum=phonNet.calculate_error(np.transpose(y))
                     print('Cost=%f; sum of weight=%f' % (cost,weightSum))
@@ -102,17 +102,22 @@ def train(phonNet,phonCount_dict,dataPath,batchSize,labelNum):
     if count >= 1:
         phonNet.forward(np.transpose(X))
         forwardedDataCount += count
-    print('Fowarded %d data' % (forwardedDataCount))
+        print('Fowarded %d data' % (forwardedDataCount))
+        cost,weightSum=phonNet.calculate_error(np.transpose(y))
+        print('Cost=%f; sum of weight=%f' % (cost,weightSum))
+        phonNet.backpropagation(np.transpose(y))
+        phonNet.update()
     print('Finish forwarding all data')
     return phonNet
 
 
-def test(phonNet,phon48_dict,phon_map,dataPath,batchSize,labelNum):
+def test(phonNet,phon48_dict,phon_map,dataPath,labelNum):
     correct,totalCount=0,0
     count=0
     X,y=[],[]
+    batchSize=1000
 
-    with open(os.path.join(dataPath,'norm_testing_data'),'r') as fp:
+    with open(dataPath,'r') as fp:
         for line in fp:
             line=line.strip().split(' ')
             segId,label,feat=line[0],phon_map[phon48_dict[line[1]]],[float(x) for x in line[2:]]
@@ -147,15 +152,20 @@ def main():
     print('Training data size=%d' % (dataSize))
     phon48_dict,phon39_dict,phon_map,labelNum=load_phonDict(dataPath)
 
-    struct_str=str(featDim)+'-128-'+str(labelNum)
+    struct_str=str(featDim)+'-256-'+str(labelNum)
     learningRate_str=0.01
     actiFunc_str='ReLU'
     costFunc_str='meanSquare'
-    momentum_float=0.9
+    momentum_float=0.1
     dropout_float=-1
     weightPenalty_float=0.0001
     lastAccu,accu=0.0,0.0
     epochCount=1
+
+    if os.path.isfile('accuracy.txt'):
+        with open('accuracy.txt','r') as fp:
+            lastAccu=float(fp.readline().strip())
+
     phonNet=dnn.DNN(struct=struct_str,learningRateFunc=learningRate_str,actiFunc=actiFunc_str,costFunc=costFunc_str,momentum=momentum_float,dropout=dropout_float,weightPenalty=weightPenalty_float)
     phonNet.load_model()
     print('Training dnn...')
@@ -163,11 +173,13 @@ def main():
         print('-------------------------------------------')
         print('round %d' % (epochCount))
         phonNet=train(phonNet,phon48_dict,dataPath,batchSize,labelNum)
-        print('Testing...')
-        phonNet,accu=test(phonNet,phon48_dict,phon_map,dataPath,batchSize,labelNum)
+        print('Testing on training set...')
+        phonNet,accu=test(phonNet,phon48_dict,phon_map,dataPath+'norm_training_data',labelNum)
         if accu > lastAccu:
             lastAccu=accu
         else:
+            with open('accuracy.txt','w') as fp:
+                fp.write('%f' % (lastAccu))
             break
         epochCount += 1
         phonNet.save_model()
